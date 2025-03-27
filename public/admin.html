@@ -94,6 +94,7 @@
       <button onclick="toggleChartType()">TOGGLE PIE/BAR</button>
       <button onclick="toggleTimeChart()">TOGGLE TIME CHART</button>
       <button onclick="resetIpLock()">UNBLOCK THIS DEVICE</button>
+      <button onclick="clearNoAnswers()">CLEAR 'NO' RESPONSES</button>
     </div>
     <div id="summary-box" style="margin: 20px auto; font-size: 1.2rem;"></div>
     <div class="search-row">
@@ -302,6 +303,16 @@
     function resetIpLock() {
   localStorage.removeItem('cathedralRejected');
   alert('IP lock cleared for this browser.');
+}
+    function clearNoAnswers() {
+  if (!confirm("Are you sure you want to delete all 'NO' responses?")) return;
+  fetch(`/clear-no?pass=${pass}`, { method: "GET" })
+    .then(res => res.text())
+    .then(() => {
+      alert("NO answers cleared.");
+      loadData(); // refresh table/chart
+    })
+    .catch(() => alert("Error clearing NO answers."));
 }
   </script>
 </body>
