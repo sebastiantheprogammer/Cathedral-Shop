@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="UTF-8">
   <title>Cathedral Shop X</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
@@ -94,16 +95,24 @@
   </div>
 
 <script>
-  function nextScreen(isStudent) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    if (isStudent) {
-      document.getElementById("screen2").classList.add("active");
-      document.getElementById("nav-icons").style.display = "flex";
-    } else {
-      document.getElementById("screen3").classList.add("active");
-      document.getElementById("nav-icons").style.display = "none";
-    }
+  window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('cathedralRejected') === 'true') {
+    goToScreen(3);
   }
+});
+
+function nextScreen(isStudent) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  if (isStudent) {
+    localStorage.setItem('cathedralRejected', 'false');
+    document.getElementById("screen2").classList.add("active");
+    document.getElementById("nav-icons").style.display = "flex";
+  } else {
+    localStorage.setItem('cathedralRejected', 'true');
+    document.getElementById("screen3").classList.add("active");
+    document.getElementById("nav-icons").style.display = "none";
+  }
+}
 
   function goToScreen(num) {
     document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
