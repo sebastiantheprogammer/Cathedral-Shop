@@ -103,6 +103,15 @@
 
 function nextScreen(isStudent) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+  // Log YES or NO
+  const answer = isStudent ? 'YES' : 'NO';
+  fetch('/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answer })
+  });
+
   if (isStudent) {
     localStorage.setItem('cathedralRejected', 'false');
     document.getElementById("screen2").classList.add("active");
