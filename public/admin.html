@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: white;
+      --fg: black;
+      --highlight: black;
+      --text: white;
+    }
+    body.dark {
+      --bg: black;
+      --fg: white;
+      --highlight: white;
+      --text: black;
+    }
+    body {
+      font-family: 'Bebas Neue', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 40px 20px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+    input {
+      font-family: 'Bebas Neue', sans-serif;
+      padding: 10px;
+      font-size: 1.2rem;
+      width: 250px;
+      border: 2px solid var(--fg);
+      margin-bottom: 10px;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    button {
+      font-family: 'Bebas Neue', sans-serif;
+      background: none;
+      border: 2px solid var(--fg);
+      color: var(--fg);
+      padding: 10px 20px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin: 5px;
+    }
+    table {
+      width: 100%;
+      max-width: 800px;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 2px solid var(--fg);
+      padding: 10px;
+      font-size: 1.1rem;
+    }
+    th {
+      background: var(--fg);
+      color: var(--text);
+    }
+    .shake {
+      animation: shake 0.5s;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-10px); }
+      40%, 80% { transform: translateX(10px); }
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="toggle">
+    <button onclick="toggleDarkMode()">TOGGLE MODE</button>
+  </div>
+  <h1>ADMIN PANEL</h1>
+
+  <div id="login-box">
+    <input type="password" id="admin-pass" placeholder="ENTER PASSWORD" />
+  </div>
+
+  <div id="dashboard" class="hidden">
+    <div class="btn-row">
+      <button onclick="exportCSV()">DOWNLOAD CSV</button>
+      <button onclick="clearData()">RESET DATA</button>
+      <button onclick="logout()">LOG OUT</button>
+      <button onclick="toggleChartType()">TOGGLE PIE/BAR</button>
+      <button onclick="toggleTimeChart()">TOGGLE TIME CHART</button>
+    </div>
+    <div id="summary-box" style="margin: 20px auto; font-size: 1.2rem;"></div>
+    <div class="search-row">
+      <input type="text" id="search" placeholder="Search IP or Answer..." oninput="filterData()" />
+      <p id="count"></p>
+    </div>
+    <div id="sensitive-info">
+      <table>
+        <thead>
+          <tr>
+            <th>IP ADDRESS</th>
+            <th>ANSWER</th>
+            <th>TIME</th>
+          </tr>
+        </thead>
+        <tbody id="data-table"></tbody>
+      </table>
+      <canvas id="drinkChart" style="max-width:700px;margin:40px auto;"></canvas>
+      <canvas id="timeChart" style="max-width:700px;margin:40px auto; display:none;"></canvas>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    let pass = "";
+    let allData = [];
+    let chartType = 'bar';
+    let showTime = false;
+    let failedAttempts = 0;
+
+    document.getElementById('admin-pass').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') loadData();
+    });
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+    }
+
+    function loadData() {
+      pass = document.getElementById('admin-pass').value;
+      fetch(`/api/data?pass=${pass}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Unauthorized');
+          return res.json();
+        })
+        .then(data => {
+          failedAttempts = 0;
+          allData = data;
+          document.getElementById("login-box").classList.add("hidden");
+          document.getElementById("dashboard").classList.remove("hidden");
+          document.getElementById("sensitive-info").classList.remove("hidden");
+          displayData(data);
+          updateChart(data);
+        })
+        .catch(() => {
+          failedAttempts++;
+          const input = document.getElementById("admin-pass");
+          input.classList.add("shake");
+          setTimeout(() => input.classList.remove("shake"), 500);
+          if (failedAttempts >= 3) {
+            input.disabled = true;
+            alert("Too many failed attempts. Reload the page to try again.");
+          } else {
+            alert("Incorrect password.");
+          }
+        });
+    }
+
+    function displayData(data) {
+      const tbody = document.getElementById("data-table");
+      tbody.innerHTML = "";
+      document.getElementById("count").textContent = `${data.length} submission(s)`;
+      const counts = {};
+      data.forEach(entry => {
+        const drink = entry.answer || "Unknown";
+        counts[drink] = (counts[drink] || 0) + 1;
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${entry.ip}</td>
+          <td>${entry.answer}</td>
+          <td>${new Date(entry.timestamp).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+      });
+      const topDrink = Object.keys(counts)[Object.values(counts).indexOf(Math.max(...Object.values(counts)))];
+      document.getElementById('summary-box').textContent =
+        `Total Submissions: ${data.length} | Top Drink: ${topDrink}`;
+    }
+
+    function filterData() {
+      const keyword = document.getElementById("search").value.toLowerCase();
+      const filtered = allData.filter(entry =>
+        entry.ip.toLowerCase().includes(keyword) || entry.answer.toLowerCase().includes(keyword)
+      );
+      displayData(filtered);
+    }
+
+    function exportCSV() {
+      const rows = [["IP Address", "Answer", "Timestamp"]];
+      allData.forEach(entry => {
+        rows.push([entry.ip, entry.answer, entry.timestamp]);
+      });
+      let csvContent = rows.map(e => e.join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "submissions.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function clearData() {
+      if (!confirm("Are you sure you want to delete all data?")) return;
+      fetch(`/clear?pass=${pass}`, { method: "GET" })
+        .then(res => res.text())
+        .then(() => {
+          allData = [];
+          displayData([]);
+          alert("Data cleared.");
+        })
+        .catch(() => alert("Error clearing data."));
+    }
+
+    function logout() {
+      document.getElementById("dashboard").classList.add("hidden");
+      document.getElementById("login-box").classList.remove("hidden");
+      document.getElementById("admin-pass").value = "";
+      document.getElementById("admin-pass").disabled = false;
+    }
+
+    function updateChart(data) {
+      const counts = {};
+      data.forEach(entry => {
+        const drink = entry.answer || "Unknown";
+        counts[drink] = (counts[drink] || 0) + 1;
+      });
+      const labels = Object.keys(counts);
+      const values = Object.values(counts);
+
+      const ctx = document.getElementById('drinkChart').getContext('2d');
+      if (window.drinkChart) window.drinkChart.destroy();
+      window.drinkChart = new Chart(ctx, {
+        type: chartType,
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Drink Votes',
+            data: values,
+            borderWidth: 2,
+            borderColor: getComputedStyle(document.body).getPropertyValue('--fg'),
+            backgroundColor: getComputedStyle(document.body).getPropertyValue('--fg')
+          }]
+        },
+        options: {
+          plugins: { legend: { display: chartType === 'pie' } },
+          scales: chartType === 'pie' ? {} : {
+            x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--fg') }},
+            y: { beginAtZero: true, ticks: { color: getComputedStyle(document.body).getPropertyValue('--fg') }}
+          }
+        }
+      });
+    }
+
+    function toggleChartType() {
+      chartType = chartType === 'bar' ? 'pie' : 'bar';
+      updateChart(allData);
+    }
+
+    function toggleTimeChart() {
+      const canvas = document.getElementById("timeChart");
+      canvas.style.display = showTime ? "none" : "block";
+      showTime = !showTime;
+      if (showTime) {
+        const ctx = canvas.getContext("2d");
+        const countsByDate = {};
+        allData.forEach(entry => {
+          const date = new Date(entry.timestamp).toLocaleDateString();
+          countsByDate[date] = (countsByDate[date] || 0) + 1;
+        });
+        const labels = Object.keys(countsByDate);
+        const values = Object.values(countsByDate);
+        if (window.timeChart) window.timeChart.destroy();
+        window.timeChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Submissions by Day',
+              data: values,
+              borderWidth: 2,
+              borderColor: getComputedStyle(document.body).getPropertyValue('--fg'),
+              backgroundColor: getComputedStyle(document.body).getPropertyValue('--fg')
+            }]
+          },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--fg') }},
+              y: { beginAtZero: true, ticks: { color: getComputedStyle(document.body).getPropertyValue('--fg') }}
+            }
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html>
