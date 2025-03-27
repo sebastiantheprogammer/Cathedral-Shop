@@ -25,7 +25,7 @@ app.post('/submit', (req, res) => {
   if (data.some(d => d.ip === ip && d.answer === answer)) {
   return res.status(403).send('Already submitted this answer.');
 }
-
+  
   const newEntry = {
     ip: userIP,
     answer,
