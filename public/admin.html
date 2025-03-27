@@ -93,6 +93,7 @@
       <button onclick="logout()">LOG OUT</button>
       <button onclick="toggleChartType()">TOGGLE PIE/BAR</button>
       <button onclick="toggleTimeChart()">TOGGLE TIME CHART</button>
+      <button onclick="resetIpLock()">UNBLOCK THIS DEVICE</button>
     </div>
     <div id="summary-box" style="margin: 20px auto; font-size: 1.2rem;"></div>
     <div class="search-row">
@@ -298,6 +299,10 @@
         });
       }
     }
+    function resetIpLock() {
+  localStorage.removeItem('cathedralRejected');
+  alert('IP lock cleared for this browser.');
+}
   </script>
 </body>
 </html>
