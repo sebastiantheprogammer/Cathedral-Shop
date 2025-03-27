@@ -22,9 +22,9 @@ app.post('/submit', (req, res) => {
   }
 
   const alreadySubmitted = savedData.find(entry => entry.ip === userIP);
-  if (alreadySubmitted) {
-    return res.status(403).json({ message: 'You already submitted.' });
-  }
+  if (data.some(d => d.ip === ip && d.answer === answer)) {
+  return res.status(403).send('Already submitted this answer.');
+}
 
   const newEntry = {
     ip: userIP,
