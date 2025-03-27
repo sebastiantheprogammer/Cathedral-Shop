@@ -60,3 +60,11 @@ app.get('/clear', (req, res) => {
   fs.writeFileSync(dataFile, JSON.stringify([], null, 2));
   res.send('Data cleared');
 });
+
+app.get('/clear-no', (req, res) => {
+  if (req.query.pass !== process.env.ADMIN_PASS) return res.status(401).send('Unauthorized');
+  let data = JSON.parse(fs.readFileSync(dataFile));
+  data = data.filter(entry => entry.answer !== 'NO');
+  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
+  res.send('NO answers cleared');
+});
