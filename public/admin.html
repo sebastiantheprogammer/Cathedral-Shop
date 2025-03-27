@@ -113,7 +113,8 @@
         <tbody id="data-table"></tbody>
       </table>
       <canvas id="drinkChart" style="max-width:700px;margin:40px auto;"></canvas>
-      <canvas id="timeChart" style="max-width:700px;margin:40px auto; display:none;"></canvas>
+      <canvas id="timeChart" style="max-width:700px;margin:40px auto; display:none;"></canvas> 
+      <canvas id="yesNoChart" style="max-width:300px; margin:20px auto;"></canvas>
     </div>
   </div>
 
@@ -178,10 +179,11 @@
         `;
         tbody.appendChild(row);
       });
-      const topDrink = Object.keys(counts)[Object.values(counts).indexOf(Math.max(...Object.values(counts)))];
-      document.getElementById('summary-box').textContent =
-        `Total Submissions: ${data.length} | Top Drink: ${topDrink}`;
-    }
+      const yesCount = data.filter(d => d.answer === 'YES').length;
+const noCount = data.filter(d => d.answer === 'NO').length;
+
+document.getElementById('summary-box').textContent =
+  `Total Submissions: ${data.length} | YES: ${yesCount} | NO: ${noCount} | Top Drink: ${topDrink}`;
 
     function filterData() {
       const keyword = document.getElementById("search").value.toLowerCase();
@@ -234,6 +236,29 @@
       });
       const labels = Object.keys(counts);
       const values = Object.values(counts);
+      const yesNoCounts = {
+  YES: data.filter(d => d.answer === 'YES').length,
+  NO: data.filter(d => d.answer === 'NO').length
+};
+
+const ynCtx = document.getElementById("yesNoChart").getContext("2d");
+if (window.yesNoChart) window.yesNoChart.destroy();
+window.yesNoChart = new Chart(ynCtx, {
+  type: 'pie',
+  data: {
+    labels: ['YES', 'NO'],
+    datasets: [{
+      label: 'Verification',
+      data: [yesNoCounts.YES, yesNoCounts.NO],
+      borderWidth: 2,
+      borderColor: '#000',
+      backgroundColor: ['#4caf50', '#f44336']
+    }]
+  },
+  options: {
+    plugins: { legend: { display: true } }
+  }
+});
 
       const ctx = document.getElementById('drinkChart').getContext('2d');
       if (window.drinkChart) window.drinkChart.destroy();
