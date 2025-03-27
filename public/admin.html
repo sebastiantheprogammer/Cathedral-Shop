@@ -184,7 +184,7 @@ const noCount = data.filter(d => d.answer === 'NO').length;
 
 document.getElementById('summary-box').textContent =
   `Total Submissions: ${data.length} | YES: ${yesCount} | NO: ${noCount} | Top Drink: ${topDrink}`;
-
+    }
     function filterData() {
       const keyword = document.getElementById("search").value.toLowerCase();
       const filtered = allData.filter(entry =>
