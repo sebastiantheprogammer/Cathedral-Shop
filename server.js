@@ -21,10 +21,10 @@ app.post('/submit', (req, res) => {
     savedData = JSON.parse(fs.readFileSync(dataFile));
   }
 
-  const alreadySubmitted = savedData.find(entry => entry.ip === userIP);
-  if (data.some(d => d.ip === ip && d.answer === answer)) {
-  return res.status(403).send('Already submitted this answer.');
-}
+  const alreadySubmitted = savedData.find(entry => entry.ip === userIP && entry.answer === answer);
+  if (alreadySubmitted) {
+    return res.status(403).send('Already submitted this answer.');
+  }
   
   const newEntry = {
     ip: userIP,
@@ -49,11 +49,6 @@ app.get('/api/data', (req, res) => {
   res.json(data);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
-
-
 app.get('/clear', (req, res) => {
   const password = req.query.pass;
   if (password !== process.env.ADMIN_PASS) return res.status(401).send('Unauthorized');
@@ -67,4 +62,8 @@ app.get('/clear-no', (req, res) => {
   data = data.filter(entry => entry.answer !== 'NO');
   fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
   res.send('NO answers cleared');
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
 });

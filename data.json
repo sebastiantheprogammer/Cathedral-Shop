@@ -3,5 +3,10 @@
     "ip": "::1",
     "answer": "ARIZONA",
     "timestamp": "2025-03-27T01:30:50.508Z"
+  },
+  {
+    "ip": "::1",
+    "answer": "YES",
+    "timestamp": "2025-04-07T02:55:39.228Z"
   }
 ]

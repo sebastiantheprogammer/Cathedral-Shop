@@ -182,6 +182,17 @@
       const yesCount = data.filter(d => d.answer === 'YES').length;
 const noCount = data.filter(d => d.answer === 'NO').length;
 
+// Find the top drink
+const drinkCounts = {};
+data.forEach(entry => {
+  if (entry.answer !== 'YES' && entry.answer !== 'NO') {
+    drinkCounts[entry.answer] = (drinkCounts[entry.answer] || 0) + 1;
+  }
+});
+const topDrink = Object.keys(drinkCounts).length > 0 
+  ? Object.entries(drinkCounts).sort((a, b) => b[1] - a[1])[0][0] 
+  : 'None';
+
 document.getElementById('summary-box').textContent =
   `Total Submissions: ${data.length} | YES: ${yesCount} | NO: ${noCount} | Top Drink: ${topDrink}`;
     }
