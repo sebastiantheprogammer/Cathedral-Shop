@@ -74,6 +74,39 @@
       40%, 80% { transform: translateX(10px); }
     }
     .hidden { display: none; }
+    .question-form {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      border: 2px solid var(--fg);
+      display: none;
+    }
+    .question-form.visible {
+      display: block;
+    }
+    .option-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .option-row input {
+      flex: 1;
+    }
+    .option-row input[type="number"] {
+      width: 100px;
+    }
+    .questions-table {
+      margin-top: 20px;
+    }
+    .add-option-btn {
+      background: var(--fg);
+      color: var(--text);
+    }
+    .remove-option-btn {
+      background: var(--bg);
+      color: var(--fg);
+      padding: 5px 10px;
+    }
   </style>
 </head>
 <body>
@@ -95,7 +128,37 @@
       <button onclick="toggleTimeChart()">TOGGLE TIME CHART</button>
       <button onclick="resetIpLock()">UNBLOCK THIS DEVICE</button>
       <button onclick="clearNoAnswers()">CLEAR 'NO' RESPONSES</button>
+      <button onclick="toggleQuestions()">MANAGE QUESTIONS</button>
     </div>
+
+    <!-- New Questions Management Section -->
+    <div class="question-form" id="question-form">
+      <h2>MANAGE QUESTIONS</h2>
+      <input type="text" id="question-text" placeholder="Enter question text" />
+      <div id="options-container">
+        <div class="option-row">
+          <input type="text" placeholder="Option name" />
+          <input type="number" placeholder="Price" step="0.01" min="0" />
+          <button class="remove-option-btn" onclick="removeOption(this)">X</button>
+        </div>
+      </div>
+      <button class="add-option-btn" onclick="addOption()">ADD OPTION</button>
+      <button onclick="saveQuestion()">SAVE QUESTION</button>
+      
+      <div class="questions-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Question</th>
+              <th>Options</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="questions-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div id="summary-box" style="margin: 20px auto; font-size: 1.2rem;"></div>
     <div class="search-row">
       <input type="text" id="search" placeholder="Search IP or Answer..." oninput="filterData()" />
@@ -125,8 +188,21 @@
     let showTime = false;
     let failedAttempts = 0;
 
+    // Get password from URL on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      pass = urlParams.get('pass');
+      if (pass) {
+        loadData();
+        loadQuestions();
+      }
+    });
+
     document.getElementById('admin-pass').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') loadData();
+      if (e.key === 'Enter') {
+        pass = document.getElementById('admin-pass').value;
+        window.location.href = `/admin?pass=${encodeURIComponent(pass)}`;
+      }
     });
 
     function toggleDarkMode() {
@@ -134,8 +210,13 @@
     }
 
     function loadData() {
-      pass = document.getElementById('admin-pass').value;
-      fetch(`/api/data?pass=${pass}`)
+      if (!pass) {
+        document.getElementById("login-box").classList.remove("hidden");
+        document.getElementById("dashboard").classList.add("hidden");
+        return;
+      }
+
+      fetch(`/api/data?pass=${encodeURIComponent(pass)}`)
         .then(res => {
           if (!res.ok) throw new Error('Unauthorized');
           return res.json();
@@ -222,7 +303,7 @@ document.getElementById('summary-box').textContent =
 
     function clearData() {
       if (!confirm("Are you sure you want to delete all data?")) return;
-      fetch(`/clear?pass=${pass}`, { method: "GET" })
+      fetch(`/clear?pass=${encodeURIComponent(pass)}`, { method: "GET" })
         .then(res => res.text())
         .then(() => {
           allData = [];
@@ -248,28 +329,35 @@ document.getElementById('summary-box').textContent =
       const labels = Object.keys(counts);
       const values = Object.values(counts);
       const yesNoCounts = {
-  YES: data.filter(d => d.answer === 'YES').length,
-  NO: data.filter(d => d.answer === 'NO').length
-};
+        YES: data.filter(d => d.answer === 'YES').length,
+        NO: data.filter(d => d.answer === 'NO').length
+      };
 
-const ynCtx = document.getElementById("yesNoChart").getContext("2d");
-if (window.yesNoChart) window.yesNoChart.destroy();
-window.yesNoChart = new Chart(ynCtx, {
-  type: 'pie',
-  data: {
-    labels: ['YES', 'NO'],
-    datasets: [{
-      label: 'Verification',
-      data: [yesNoCounts.YES, yesNoCounts.NO],
-      borderWidth: 2,
-      borderColor: '#000',
-      backgroundColor: ['#4caf50', '#f44336']
-    }]
-  },
-  options: {
-    plugins: { legend: { display: true } }
-  }
-});
+      const ynCtx = document.getElementById("yesNoChart").getContext("2d");
+      if (window.yesNoChart) window.yesNoChart.destroy();
+      window.yesNoChart = new Chart(ynCtx, {
+        type: 'pie',
+        data: {
+          labels: ['YES', 'NO'],
+          datasets: [{
+            label: 'Verification',
+            data: [yesNoCounts.YES, yesNoCounts.NO],
+            borderWidth: 2,
+            borderColor: getComputedStyle(document.body).getPropertyValue('--fg'),
+            backgroundColor: ['#4caf50', '#f44336']
+          }]
+        },
+        options: {
+          plugins: { 
+            legend: { 
+              display: true,
+              labels: {
+                color: getComputedStyle(document.body).getPropertyValue('--fg')
+              }
+            } 
+          }
+        }
+      });
 
       const ctx = document.getElementById('drinkChart').getContext('2d');
       if (window.drinkChart) window.drinkChart.destroy();
@@ -282,14 +370,32 @@ window.yesNoChart = new Chart(ynCtx, {
             data: values,
             borderWidth: 2,
             borderColor: getComputedStyle(document.body).getPropertyValue('--fg'),
-            backgroundColor: getComputedStyle(document.body).getPropertyValue('--fg')
+            backgroundColor: chartType === 'pie' 
+              ? ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+              : getComputedStyle(document.body).getPropertyValue('--fg')
           }]
         },
         options: {
-          plugins: { legend: { display: chartType === 'pie' } },
+          plugins: { 
+            legend: { 
+              display: chartType === 'pie',
+              labels: {
+                color: getComputedStyle(document.body).getPropertyValue('--fg')
+              }
+            } 
+          },
           scales: chartType === 'pie' ? {} : {
-            x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--fg') }},
-            y: { beginAtZero: true, ticks: { color: getComputedStyle(document.body).getPropertyValue('--fg') }}
+            x: { 
+              ticks: { 
+                color: getComputedStyle(document.body).getPropertyValue('--fg')
+              }
+            },
+            y: { 
+              beginAtZero: true, 
+              ticks: { 
+                color: getComputedStyle(document.body).getPropertyValue('--fg')
+              }
+            }
           }
         }
       });
@@ -341,15 +447,146 @@ window.yesNoChart = new Chart(ynCtx, {
   alert('IP lock cleared for this browser.');
 }
     function clearNoAnswers() {
-  if (!confirm("Are you sure you want to delete all 'NO' responses?")) return;
-  fetch(`/clear-no?pass=${pass}`, { method: "GET" })
-    .then(res => res.text())
-    .then(() => {
-      alert("NO answers cleared.");
-      loadData(); // refresh table/chart
-    })
-    .catch(() => alert("Error clearing NO answers."));
-}
+      if (!confirm("Are you sure you want to delete all 'NO' responses?")) return;
+      fetch(`/clear-no?pass=${encodeURIComponent(pass)}`, { method: "GET" })
+        .then(res => res.text())
+        .then(() => {
+          alert("NO answers cleared.");
+          loadData(); // refresh table/chart
+        })
+        .catch(() => alert("Error clearing NO answers."));
+    }
+
+    // New functions for question management
+    function addOption() {
+      const container = document.getElementById('options-container');
+      const newRow = document.createElement('div');
+      newRow.className = 'option-row';
+      newRow.innerHTML = `
+        <input type="text" placeholder="Option name" />
+        <input type="number" placeholder="Price" step="0.01" min="0" />
+        <button class="remove-option-btn" onclick="removeOption(this)">X</button>
+      `;
+      container.appendChild(newRow);
+    }
+
+    function removeOption(button) {
+      const container = document.getElementById('options-container');
+      if (container.children.length > 1) {
+        button.parentElement.remove();
+      } else {
+        alert('You must have at least one option');
+      }
+    }
+
+    function saveQuestion() {
+      const questionText = document.getElementById('question-text').value;
+      if (!questionText) {
+        alert('Please enter a question');
+        return;
+      }
+
+      const options = [];
+      const optionRows = document.querySelectorAll('.option-row');
+      optionRows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const name = inputs[0].value;
+        const price = parseFloat(inputs[1].value);
+        if (name && !isNaN(price)) {
+          options.push({ name, price });
+        }
+      });
+
+      if (options.length === 0) {
+        alert('Please add at least one option');
+        return;
+      }
+
+      const questionData = {
+        question: questionText,
+        options: options
+      };
+
+      fetch('/api/questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(questionData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        alert('Question saved successfully');
+        loadQuestions();
+        // Clear form
+        document.getElementById('question-text').value = '';
+        const container = document.getElementById('options-container');
+        container.innerHTML = `
+          <div class="option-row">
+            <input type="text" placeholder="Option name" />
+            <input type="number" placeholder="Price" step="0.01" min="0" />
+            <button class="remove-option-btn" onclick="removeOption(this)">X</button>
+          </div>
+        `;
+      })
+      .catch(error => {
+        alert('Error saving question');
+        console.error('Error:', error);
+      });
+    }
+
+    function loadQuestions() {
+      fetch(`/api/questions?pass=${encodeURIComponent(pass)}`)
+        .then(response => response.json())
+        .then(questions => {
+          const tbody = document.getElementById('questions-table-body');
+          tbody.innerHTML = '';
+          questions.forEach(question => {
+            const row = document.createElement('tr');
+            const optionsList = question.options.map(opt => 
+              `${opt.name} ($${opt.price.toFixed(2)})`
+            ).join('<br>');
+            row.innerHTML = `
+              <td>${question.question}</td>
+              <td>${optionsList}</td>
+              <td>
+                <button onclick="deleteQuestion('${question._id}')">DELETE</button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error('Error loading questions:', error);
+        });
+    }
+
+    function deleteQuestion(questionId) {
+      if (!confirm('Are you sure you want to delete this question?')) return;
+      
+      fetch(`/api/questions/${questionId}?pass=${encodeURIComponent(pass)}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (response.ok) {
+          loadQuestions();
+        } else {
+          throw new Error('Failed to delete question');
+        }
+      })
+      .catch(error => {
+        alert('Error deleting question');
+        console.error('Error:', error);
+      });
+    }
+
+    function toggleQuestions() {
+      const form = document.getElementById('question-form');
+      form.classList.toggle('visible');
+      if (form.classList.contains('visible')) {
+        loadQuestions(); // Load questions when showing the form
+      }
+    }
   </script>
 </body>
 </html>

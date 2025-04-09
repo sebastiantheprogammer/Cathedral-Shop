@@ -1,12 +1,12 @@
 [
   {
     "ip": "::1",
-    "answer": "ARIZONA",
-    "timestamp": "2025-03-27T01:30:50.508Z"
+    "answer": "YES",
+    "timestamp": "2025-04-08T18:00:58.654Z"
   },
   {
     "ip": "::1",
-    "answer": "YES",
-    "timestamp": "2025-04-07T02:55:39.228Z"
+    "answer": "ARIZONA",
+    "timestamp": "2025-04-08T18:01:00.160Z"
   }
 ]

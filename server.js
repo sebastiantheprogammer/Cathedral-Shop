@@ -72,6 +72,54 @@ app.get('/clear-no', (req, res) => {
   res.send('NO answers cleared');
 });
 
+// Questions management endpoints
+const questionsFile = path.join(__dirname, 'questions.json');
+
+// Initialize questions file if it doesn't exist
+if (!fs.existsSync(questionsFile)) {
+  fs.writeFileSync(questionsFile, JSON.stringify([], null, 2));
+}
+
+// Get all questions
+app.get('/api/questions', (req, res) => {
+  if (req.query.pass !== process.env.ADMIN_PASS) return res.status(401).json({ error: 'Unauthorized' });
+  const questions = JSON.parse(fs.readFileSync(questionsFile));
+  res.json(questions);
+});
+
+// Add a new question
+app.post('/api/questions', (req, res) => {
+  if (!req.body.question || !req.body.options) {
+    return res.status(400).json({ error: 'Missing question or options' });
+  }
+  
+  const questions = JSON.parse(fs.readFileSync(questionsFile));
+  const newQuestion = {
+    _id: Date.now().toString(),
+    question: req.body.question,
+    options: req.body.options
+  };
+  
+  questions.push(newQuestion);
+  fs.writeFileSync(questionsFile, JSON.stringify(questions, null, 2));
+  res.json(newQuestion);
+});
+
+// Delete a question
+app.delete('/api/questions/:id', (req, res) => {
+  if (req.query.pass !== process.env.ADMIN_PASS) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const questions = JSON.parse(fs.readFileSync(questionsFile));
+  const filteredQuestions = questions.filter(q => q._id !== req.params.id);
+  
+  if (filteredQuestions.length === questions.length) {
+    return res.status(404).json({ error: 'Question not found' });
+  }
+  
+  fs.writeFileSync(questionsFile, JSON.stringify(filteredQuestions, null, 2));
+  res.json({ success: true });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
